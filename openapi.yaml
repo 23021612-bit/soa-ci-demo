@@ -1,0 +1,213 @@
+openapi: 3.0.3
+info:
+  title: Task API
+  version: 1.0.0
+  description: Simple Task API used to practice CI/CD with GitHub Actions.
+  contact:
+    name: Dev Team
+    email: dev@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:8000
+tags:
+  - name: system
+    description: Service health
+  - name: tasks
+    description: Task management
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Health check
+      description: Returns 200 when the service is up.
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /api/v1/tasks:
+    get:
+      tags: [tasks]
+      operationId: listTasks
+      summary: List tasks
+      description: Returns all tasks, optionally filtered by completion state.
+      parameters:
+        - name: done
+          in: query
+          required: false
+          description: Filter by completion state.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [tasks]
+      operationId: createTask
+      summary: Create a task
+      description: Creates a new task and returns it with a Location header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreate"
+      responses:
+        "201":
+          description: Task created
+          headers:
+            Location:
+              description: URL of the new task
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/tasks/{task_id}:
+    parameters:
+      - name: task_id
+        in: path
+        required: true
+        description: Task identifier.
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags: [tasks]
+      operationId: getTask
+      summary: Get a task
+      description: Returns a single task by id.
+      responses:
+        "200":
+          description: The task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [tasks]
+      operationId: updateTask
+      summary: Replace a task
+      description: Replaces title and done state of an existing task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [tasks]
+      operationId: deleteTask
+      summary: Delete a task
+      description: Deletes a task by id.
+      responses:
+        "204":
+          description: Task deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Task:
+      type: object
+      required: [id, title, done]
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Learn CI/CD
+        done:
+          type: boolean
+          example: false
+    TaskCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Learn CI/CD
+        done:
+          type: boolean
+          default: false
+    TaskUpdate:
+      type: object
+      required: [title, done]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Learn CI/CD
+        done:
+          type: boolean
+          example: true
+    TaskList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        total:
+          type: integer
+          example: 1
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: integer
+              example: 404
+            message:
+              type: string
+              example: task not found
